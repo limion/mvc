@@ -9,7 +9,8 @@ Learn MVC pattern by building a small app.
 The app consists of `index.html`, `script.js`, and `style.css`. What else do you need?
 
 - [View Tutorial](https://www.taniarascia.com/javascript-mvc-todo-app)
-- [View Demo Application](https://taniarascia.github.io/mvc)
+- [View Original Demo Application](https://taniarascia.github.io/mvc)
+- [View Modified Demo Application](https://limion.github.io/mvc) Model and View are independent of Controller
 
 ## Author
 
