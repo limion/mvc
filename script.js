@@ -1,22 +1,48 @@
 /**
+ * @class EventEmitter
+ *
+ * Simple event emitter class
+ */
+class EventEmitter {
+  constructor() {
+    this.handlers = {};
+  }
+
+  emit(eventName, ...params) {
+    if (undefined === this.handlers[eventName]) {
+      return;
+    }
+
+    for (let handler of this.handlers[eventName]) {
+      handler(...params);
+    }
+  }
+
+  addHandler(eventName, handler) {
+    this.handlers[eventName] = undefined === this.handlers[eventName]
+      ? [handler]
+      : [...this.handlers[eventName], handler];
+  }
+}
+
+/**
  * @class Model
  *
  * Manages the data of the application.
  */
-class Model {
+class Model extends EventEmitter {
   constructor() {
+    super()
     this.todos = JSON.parse(localStorage.getItem('todos')) || []
   }
 
-  bindEvents(controller) {
-    this.onTodoListChanged = controller.onTodoListChanged
-  }
+  todoListChangedEvent = () => 'todoListChanged'
 
   addTodo(todo) {
     this.todos = [...this.todos, todo]
     this.update()
 
-    this.onTodoListChanged(this.todos)
+    this.emit(this.todoListChangedEvent(), this.todos)
   }
 
   editTodo(id, updatedText) {
@@ -25,14 +51,14 @@ class Model {
     )
     this.update()
 
-    this.onTodoListChanged(this.todos)
+    this.emit(this.todoListChangedEvent(), this.todos)
   }
 
   deleteTodo(id) {
     this.todos = this.todos.filter(todo => todo.id !== id)
     this.update()
 
-    this.onTodoListChanged(this.todos)
+    this.emit(this.todoListChangedEvent(), this.todos)
   }
 
   toggleTodo(id) {
@@ -41,7 +67,7 @@ class Model {
     )
     this.update()
 
-    this.onTodoListChanged(this.todos)
+    this.emit(this.todoListChangedEvent(), this.todos)
   }
 
   update() {
@@ -54,8 +80,10 @@ class Model {
  *
  * Visual representation of the model.
  */
-class View {
+class View extends EventEmitter {
   constructor() {
+    super()
+
     this.app = this.getElement('#root')
     this.form = this.createElement('form')
     this.input = this.createElement('input')
@@ -69,7 +97,15 @@ class View {
     this.title.textContent = 'Todos'
     this.todoList = this.createElement('ul', 'todo-list')
     this.app.append(this.title, this.form, this.todoList)
+
+    this.bindEvents();
   }
+
+  addTodoEvent = () => 'addTodo'
+  deleteTodoEvent = () => 'deleteTodo'
+  editTodoEvent = () => 'editTodo'
+  editTodoCompleteEvent = () => 'editTodoComplete'
+  toggleEvent = () => 'toggle'
 
   get todoText() {
     return this.input.value
@@ -138,12 +174,12 @@ class View {
     console.log(todos)
   }
 
-  bindEvents(controller) {
-    this.form.addEventListener('submit', controller.handleAddTodo)
-    this.todoList.addEventListener('click', controller.handleDeleteTodo)
-    this.todoList.addEventListener('input', controller.handleEditTodo)
-    this.todoList.addEventListener('focusout', controller.handleEditTodoComplete)
-    this.todoList.addEventListener('change', controller.handleToggle)
+  bindEvents() {
+    this.form.addEventListener('submit', this.emit.bind(this, this.addTodoEvent()))
+    this.todoList.addEventListener('click', this.emit.bind(this, this.deleteTodoEvent()))
+    this.todoList.addEventListener('input', this.emit.bind(this, this.editTodoEvent()))
+    this.todoList.addEventListener('focusout', this.emit.bind(this, this.editTodoCompleteEvent()))
+    this.todoList.addEventListener('change',this.emit.bind(this, this.toggleEvent()))
   }
 }
 
@@ -157,8 +193,12 @@ class Controller {
     this.model = model
     this.view = view
 
-    this.model.bindEvents(this)
-    this.view.bindEvents(this)
+    this.view.addHandler(this.view.addTodoEvent(), this.handleAddTodo)
+    this.view.addHandler(this.view.deleteTodoEvent(), this.handleDeleteTodo)
+    this.view.addHandler(this.view.editTodoEvent(), this.handleEditTodo)
+    this.view.addHandler(this.view.editTodoCompleteEvent(), this.handleEditTodoComplete)
+    this.view.addHandler(this.view.toggleEvent(), this.handleToggle)
+    this.model.addHandler(this.model.todoListChangedEvent(), this.onTodoListChanged)
 
     this.temporaryEditValue
 
